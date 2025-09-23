@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WLED — Master</title>
+    <meta name="color-scheme" content="dark light" />
+    <link rel="stylesheet" href="index.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+  </head>
+  <body>
+    <header class="appbar">
+      <div class="brand">
+        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 2a10 10 0 1010 10A10.012 10.012 0 0012 2zm1 17.93V20a1 1 0 01-2 0v-.07A8.014 8.014 0 014 12a1 1 0 012 0 6 6 0 006 6 1 1 0 010 2zm4.95-3.49a1 1 0 01-1.41 1.41l-.71-.71a1 1 0 111.41-1.41zM12 6a6 6 0 00-6 6 1 1 0 01-2 0 8 8 0 018-8 1 1 0 010 2z"
+          ></path>
+        </svg>
+        <span>WLED Master</span>
+      </div>
+      <div class="app-actions">
+        <button id="btn-refresh-nodes" class="btn">
+          <i class="fa-solid fa-rotate"></i>
+          <span class="btn-text">Refresh Nodes</span>
+        </button>
+        <button id="auto-refresh" class="chip toggle selected" type="button">
+          Auto 15s
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <div id="view-nodes" class="view container">
+        <section class="card">
+          <div class="card-head">
+            <div class="title-row">
+              <h2 class="card-title">Nodes</h2>
+              <div class="chip" id="chip-node-count">0</div>
+            </div>
+            <div class="toolbar">
+              <button id="btn-select-all" class="btn ghost">Select All</button>
+              <button id="btn-clear-sel" class="btn ghost">Clear</button>
+              <button id="btn-refresh" class="btn">
+                <i class="fa-solid fa-arrows-rotate"></i>
+                <span class="btn-text">Refresh Selected</span>
+              </button>
+            </div>
+          </div>
+          <div id="nodes" class="grid"></div>
+        </section>
+      </div>
+
+      <div id="view-controls" class="view container">
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">Group Controls</h2>
+          </div>
+          <div class="grid grid-2">
+            <div class="control-tile">
+              <div class="tile-head">
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                  <path
+                    d="M7 22h10a5 5 0 005-5 7 7 0 00-7-7h-1V3a1 1 0 00-2 0v7h-1a7 7 0 00-7 7 5 5 0 005 5z"
+                  />
+                </svg>
+                <span>Power</span>
+              </div>
+              <div class="row">
+                <button data-action="power-on" class="btn good">
+                  <i class="fa-solid fa-power-off"></i>
+                  <span class="btn-text">On</span>
+                </button>
+                <button data-action="power-off" class="btn warn">
+                  <i class="fa-regular fa-circle-xmark"></i>
+                  <span class="btn-text">Off</span>
+                </button>
+              </div>
+            </div>
+            <div class="control-tile">
+              <div class="tile-head">
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                  <path
+                    d="M5 12a7 7 0 0014 0 1 1 0 012 0 9 9 0 11-18 0 1 1 0 012 0z"
+                  />
+                </svg>
+                <span>Brightness &amp; Transition</span>
+              </div>
+              <div class="row">
+                <label
+                  >Brightness
+                  <input
+                    type="range"
+                    id="range-bri"
+                    min="1"
+                    max="255"
+                    value="128"
+                  />
+                  <span id="label-bri" class="mono">128</span>
+                </label>
+                <label
+                  >Transition
+                  <input type="number" id="num-tr" min="0" max="10" value="2" />
+                </label>
+              </div>
+            </div>
+            <div class="control-tile">
+              <div class="tile-head">
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                  <path d="M3 12l5-9 5 9-5 9-5-9zm8.5 0l5-9 5 9-5 9-5-9z" />
+                </svg>
+                <span>Colors</span>
+              </div>
+              <div class="row">
+                <input type="color" id="color1" value="#ff0000" />
+                <input type="color" id="color2" value="#00ff00" />
+                <input type="color" id="color3" value="#0000ff" />
+                <button id="btn-apply-colors" class="btn">
+                  <i class="fa-solid fa-palette"></i>
+                  <span class="btn-text">Apply</span>
+                </button>
+              </div>
+            </div>
+            <div class="control-tile">
+              <div class="tile-head">
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                  <path
+                    d="M12 3l1.76 5.41H19l-4.4 3.2L16.36 17 12 13.8 7.64 17 9.4 11.61 5 8.41h5.24z"
+                  />
+                </svg>
+                <span>Effect</span>
+              </div>
+              <div class="row">
+                <label
+                  >FX <input id="effect-id" type="number" min="0" value="0"
+                /></label>
+                <label
+                  >Speed
+                  <input
+                    id="effect-sx"
+                    type="range"
+                    min="0"
+                    max="255"
+                    value="128"
+                /></label>
+                <label
+                  >Intensity
+                  <input
+                    id="effect-ix"
+                    type="range"
+                    min="0"
+                    max="255"
+                    value="128"
+                /></label>
+                <button id="btn-apply-effect" class="btn">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i>
+                  <span class="btn-text">Apply</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div id="view-celebrate" class="view container">
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">Celebrate</h2>
+          </div>
+          <div class="grid grid-2">
+            <div class="control-tile">
+              <div class="tile-head">
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                  <path d="M4 4l8 8-8 8 16-8z" />
+                </svg>
+                <span>Colors &amp; FX</span>
+              </div>
+              <div class="row">
+                <input
+                  type="color"
+                  id="cele-c1"
+                  value="#ff0000"
+                  title="Primary color"
+                />
+                <input
+                  type="color"
+                  id="cele-c2"
+                  value="#ffffff"
+                  title="Secondary color"
+                />
+                <label
+                  >FX
+                  <input
+                    id="cele-fx"
+                    type="number"
+                    min="0"
+                    value="0"
+                    title="Effect ID"
+                /></label>
+              </div>
+              <div class="row">
+                <label
+                  >Speed
+                  <input
+                    id="cele-sx"
+                    type="range"
+                    min="0"
+                    max="255"
+                    value="200"
+                /></label>
+                <label
+                  >Intensity
+                  <input
+                    id="cele-ix"
+                    type="range"
+                    min="0"
+                    max="255"
+                    value="180"
+                /></label>
+                <label
+                  >Brightness
+                  <input
+                    id="cele-bri"
+                    type="range"
+                    min="1"
+                    max="255"
+                    value="128"
+                /></label>
+              </div>
+            </div>
+            <div class="control-tile">
+              <div class="tile-head">
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                  <path d="M12 2a10 10 0 100 20A10 10 0 0012 2z" />
+                </svg>
+                <span>Duration &amp; Run</span>
+              </div>
+              <div class="row">
+                <label
+                  >Duration (s)
+                  <input
+                    id="cele-dur"
+                    type="number"
+                    min="1"
+                    max="600"
+                    value="30"
+                /></label>
+                <button id="btn-celebrate" class="btn good">
+                  <i class="fa-solid fa-champagne-glasses"></i>
+                  <span class="btn-text">Celebrate</span>
+                </button>
+                <button id="btn-restore-now" class="btn warn">
+                  <i class="fa-solid fa-rotate-left"></i>
+                  <span class="btn-text">Restore</span>
+                </button>
+              </div>
+              <p class="hint">
+                Uses each device's LED count for <code>seg[0].stop</code>. Saves
+                current state first, then restores after the duration.
+              </p>
+            </div>
+          </div>
+          <div
+            id="cele-status"
+            class="row"
+            style="margin-top: 0.5rem; display: none"
+          >
+            <div
+              id="cele-preview"
+              class="dev-chip"
+              title="Preview"
+              style="display: flex; align-items: center; gap: 0.4rem"
+            >
+              <span
+                id="cele-preview-swatches"
+                style="display: inline-flex; gap: 4px"
+              ></span>
+              <span id="cele-preview-text" class="mono"></span>
+            </div>
+            <div class="grow"></div>
+            <div id="cele-countdown" class="chip" title="Countdown"></div>
+            <button id="cele-cancel" class="btn warn">
+              <i class="fa-solid fa-stop"></i
+              ><span class="btn-text">Cancel</span>
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <div id="view-presets" class="view container">
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">Presets</h2>
+            <div class="toolbar">
+              <button id="btn-load-presets" class="btn">
+                <i class="fa-solid fa-database"></i>
+                <span class="btn-text">Load</span>
+              </button>
+              <label class="seg">
+                <input type="radio" name="presetMode" value="union" checked />
+                Union
+              </label>
+              <label class="seg">
+                <input type="radio" name="presetMode" value="common" /> Common
+              </label>
+            </div>
+          </div>
+          <div class="row presets-controls">
+            <div id="preset-device-filters" class="chips"></div>
+            <input
+              id="preset-search"
+              class="grow"
+              placeholder="Search presets"
+            />
+          </div>
+          <div id="presets" class="grid presets-grid"></div>
+          <div class="row">
+            <input
+              id="new-preset-name"
+              class="grow"
+              placeholder="Create Global Preset (local only)"
+            />
+            <button id="btn-save-global" class="btn">
+              <i class="fa-regular fa-floppy-disk"></i>
+              <span class="btn-text">Save</span>
+            </button>
+            <button id="btn-push-preset" class="btn">
+              <i class="fa-solid fa-paper-plane"></i>
+              <span class="btn-text">Push</span>
+            </button>
+            <button id="btn-export-global" class="btn ghost">
+              <i class="fa-solid fa-file-export"></i>
+              <span class="btn-text">Export</span>
+            </button>
+            <label class="btn ghost file">
+              <i class="fa-solid fa-file-import"></i>
+              <span class="btn-text">Import</span>
+              <input
+                id="file-import"
+                type="file"
+                accept="application/json"
+                hidden
+              />
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <div id="view-logs" class="view container">
+        <section class="card">
+          <div class="card-head"><h2 class="card-title">Logs</h2></div>
+          <pre id="log" class="log"></pre>
+        </section>
+      </div>
+    </main>
+
+    <nav class="tabs" aria-label="Primary">
+      <a href="#nodes" data-route="nodes" class="tab">
+        <i class="fa-solid fa-network-wired"></i>
+        <span>Nodes</span>
+      </a>
+      <a href="#controls" data-route="controls" class="tab">
+        <i class="fa-solid fa-sliders"></i>
+        <span>Controls</span>
+      </a>
+      <a href="#celebrate" data-route="celebrate" class="tab">
+        <i class="fa-solid fa-burst"></i>
+        <span>Celebrate</span>
+      </a>
+      <a href="#presets" data-route="presets" class="tab">
+        <i class="fa-solid fa-list-ul"></i>
+        <span>Presets</span>
+      </a>
+      <a href="#logs" data-route="logs" class="tab">
+        <i class="fa-regular fa-rectangle-list"></i>
+        <span>Logs</span>
+      </a>
+    </nav>
+
+    <footer class="foot">
+      <span>Running on this WLED device • 2025 Blockhead Solutions></span>
+    </footer>
+
+    <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
+
+    <script type="module" src="index.js"></script>
+  </body>
+</html>
