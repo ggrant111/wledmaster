@@ -169,7 +169,7 @@ async function getPresets(ip) {
       )
         col = obj.seg[0].col;
     }
-    out.push({ id: pid, name, col });
+    out.push({ id: pid, name, col, raw: obj });
   }
   return out.sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -303,7 +303,7 @@ async function refreshSelected() {
         const pm = new Map();
         for (const p of pres) {
           const arr = pm.get(p.name) || [];
-          arr.push({ id: p.id, ip: n.ip, col: p.col });
+          arr.push({ id: p.id, ip: n.ip, col: p.col, raw: p.raw });
           pm.set(p.name, arr);
         }
         n.presets = pm;
@@ -354,6 +354,80 @@ function aggPresets(mode = "union") {
   return out;
 }
 
+function openPresetModal(presetName) {
+  const modal = document.getElementById("preset-modal");
+  const nameEl = document.getElementById("pm-preset-name");
+  const list = document.getElementById("pm-devices");
+  const btnAll = document.getElementById("pm-all");
+  const btnNone = document.getElementById("pm-none");
+  const btnClose = document.getElementById("pm-close");
+  const btnApply = document.getElementById("pm-apply");
+  if (
+    !modal ||
+    !nameEl ||
+    !list ||
+    !btnAll ||
+    !btnNone ||
+    !btnClose ||
+    !btnApply
+  )
+    return false;
+  nameEl.textContent = presetName;
+  list.innerHTML = "";
+  // List currently known nodes, selected by default == all devices
+  const selectedSet = new Set(state.nodes.map((n) => n.ip));
+  for (const n of state.nodes) {
+    const row = document.createElement("div");
+    row.className = "pm-item";
+    if (selectedSet.has(n.ip)) row.classList.add("selected");
+    row.setAttribute("data-ip", n.ip);
+    row.innerHTML = `<div><div>${escapeHtml(n.name)} <span class=\"meta\">(${
+      n.ip
+    })</span></div><div class=\"meta\">v${n.ver} • ${n.leds} LEDs</div></div>`;
+    row.addEventListener("click", () => {
+      row.classList.toggle("selected");
+    });
+    list.appendChild(row);
+  }
+  btnAll.onclick = () => {
+    list
+      .querySelectorAll(".pm-item")
+      .forEach((row) => row.classList.add("selected"));
+  };
+  btnNone.onclick = () => {
+    list
+      .querySelectorAll(".pm-item")
+      .forEach((row) => row.classList.remove("selected"));
+  };
+  const close = () => {
+    modal.style.display = "none";
+    modal.setAttribute("aria-hidden", "true");
+  };
+  btnClose.onclick = close;
+  btnApply.onclick = async () => {
+    const ips = Array.from(list.querySelectorAll(".pm-item.selected")).map(
+      (r) => r.getAttribute("data-ip")
+    );
+    if (!ips.length) {
+      toast("Select at least one device", "warn", 1600);
+      return;
+    }
+    const prevSel = new Set(
+      state.nodes.filter((n) => n.checked).map((n) => n.ip)
+    );
+    state.nodes.forEach((n) => (n.checked = ips.includes(n.ip)));
+    try {
+      await applyPresetStateToIps(presetName, ips);
+    } finally {
+      state.nodes.forEach((n) => (n.checked = prevSel.has(n.ip)));
+    }
+    close();
+  };
+  modal.style.display = "flex";
+  modal.setAttribute("aria-hidden", "false");
+  return true;
+}
+
 function renderPresets(mode = "union") {
   const contEl = $("#presets");
   if (!contEl) return;
@@ -387,15 +461,7 @@ function renderPresets(mode = "union") {
       }
       if (!match) continue;
     }
-    // Pick the first ref to derive colors preview (same preset id on different nodes typically shares colors)
-    let previewCol = null;
-    if (refs && refs.length) {
-      const firstRef = refs[0];
-      const node = state.nodes.find((n) => n.ip === firstRef.ip);
-      if (node && node.presets) {
-        // no-op for now
-      }
-    }
+    // colors preview
     const ips = Array.from(new Set(refs.map((r) => r.ip)));
     const ipToName = new Map(state.nodes.map((n) => [n.ip, n.name]));
     const devHtml = ips
@@ -406,10 +472,9 @@ function renderPresets(mode = "union") {
           )}</span>`
       )
       .join(" ");
-    // derive colors from first ref that has col
     const firstWithCol = refs.find((r) => Array.isArray(r.col));
     if (firstWithCol && Array.isArray(firstWithCol.col)) {
-      const c = firstWithCol.col; // array of RGB arrays e.g., [[r,g,b],[...]]
+      const c = firstWithCol.col;
       const c1 = Array.isArray(c[0])
         ? `rgb(${c[0][0]},${c[0][1]},${c[0][2]})`
         : null;
@@ -433,16 +498,17 @@ function renderPresets(mode = "union") {
         <div class="devs">${devHtml}</div>
         <span class="src">${refs.length} refs</span>
       </div>`;
-    // background preview via CSS custom props if we can fetch one representative preset's colors later
-    // We will attach colors once clicked/loaded if needed in future.
     el.setAttribute("data-apply", encodeURIComponent(name));
     el.tabIndex = 0;
     el.addEventListener("click", async () => {
-      el.classList.add("selected");
-      try {
-        await applyPresetByName(name);
-      } finally {
-        setTimeout(() => el.classList.remove("selected"), 700);
+      // open modal, fallback to immediate apply if modal missing
+      if (!openPresetModal(name)) {
+        el.classList.add("selected");
+        try {
+          await applyPresetByName(name);
+        } finally {
+          setTimeout(() => el.classList.remove("selected"), 700);
+        }
       }
     });
     el.addEventListener("keydown", (e) => {
@@ -509,6 +575,43 @@ async function applyPresetByName(name) {
       }
     })
   );
+}
+
+async function applyPresetStateToIps(presetName, ips) {
+  const targets = state.nodes.filter((n) => ips.includes(n.ip));
+  if (!targets.length) {
+    toast("No devices selected", "warn", 1500);
+    return;
+  }
+  let ok = 0,
+    fail = 0;
+  await Promise.all(
+    targets.map(async (n) => {
+      const refs = n.presets instanceof Map ? n.presets.get(presetName) : null;
+      let body = null;
+      if (refs && refs.length && refs[0].raw) {
+        // Use raw preset content as state
+        body =
+          refs[0].raw && refs[0].raw.state ? refs[0].raw.state : refs[0].raw;
+      }
+      try {
+        if (body) {
+          await postState(n.ip, body);
+          ok++;
+        } else if (refs && refs.length) {
+          await postState(n.ip, { ps: refs[0].id });
+          ok++;
+        } else {
+          throw new Error("preset not present");
+        }
+      } catch (e) {
+        fail++;
+        log(`Apply preset to ${n.ip} failed: ${e.message}`);
+      }
+    })
+  );
+  if (fail) toast(`${ok} applied, ${fail} failed`, "warn", 2200);
+  else toast("Preset applied to selected devices.", "ok", 1800);
 }
 
 async function broadcastState(body) {

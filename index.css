@@ -448,3 +448,63 @@ code {
     opacity: 1;
   }
 }
+
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.modal .dialog {
+  width: min(680px, 96vw);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+.dialog-title {
+  margin: 0;
+  font-size: 1rem;
+}
+.dialog-body {
+  padding: 1rem;
+  max-height: 60vh;
+  overflow: auto;
+}
+.dialog-foot {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: flex-end;
+}
+.pm-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: var(--chip);
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  padding: 0.5rem 0.6rem;
+  cursor: pointer;
+}
+.pm-item .meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.pm-item.selected {
+  border-color: var(--ok);
+  box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.15) inset;
+}
